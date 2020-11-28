@@ -8,5 +8,5 @@ CREATE TABLE Vehiculo (
 )
 
 CREATE TABLE Cliente (
-
+    
 )
