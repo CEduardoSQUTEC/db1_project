@@ -13,49 +13,52 @@ CREATE TABLE Cliente (
 CREATE TABLE Persona_Natural (
     id bigserial,
     dni serial,
-    nombre varchar(50),
-    apellido varchar(50),
-    ruc_natural bigserial,
+    nombre varchar(50) not null,
+    apellido varchar(50) not null,
+    ruc_natural bigserial not null,
     PRIMARY KEY (id)
 );
 
 -- Persona_Juridica
 CREATE TABLE Persona_Juridica (
     id bigserial,
-    nombre varchar(50),
-    ruc_empresarial bigserial,
+    nombre varchar(50) not null,
+    ruc_empresarial bigserial not null,
     PRIMARY KEY (id)
 );
 
 -- Comprobante
 CREATE TABLE Comprobante (
     numero bigserial,
-    id_tienda smallserial,
+    --numero varchar(50)
+    id_tienda serial,
     id_cliente bigserial,
     total real,
-    igv real,
-    subtotal real,
+    igv double precision,
+    subtotal double precision,
     fecha timestamp,
-    cantidad serial,
+    cantidad serial not null default 0,
     PRIMARY KEY (numero),
     FOREIGN KEY (id_tienda),
     REFERENCES Tienda (id),
     FOREIGN KEY (id_cliente),
     REFERENCES Cliente (id)
+
+    CHECK(cantidad > 0)
 );
 
 -- Modelo
 CREATE TABLE Modelo (
     nombre varchar(50),
-    ano smallserial,
+    ano serial,
     marca varchar(50)
 );
 
 CREATE TABLE Kardex (
     id bigserial,
-    id_tienda smallserial,
-    nro_comprobante_ingreso bigserial,
-    tipo_operacion smallserial,
+    id_tienda serial,
+    nro_comprobante_ingreso varchar(50),
+    tipo_operacion serial,
     PRIMARY KEY (id),
     FOREIGN KEY (id_tienda),
     REFERENCES Tienda (id),
@@ -65,7 +68,7 @@ CREATE TABLE Kardex (
 
 -- Tienda
 CREATE TABLE Tienda (
-    id smallserial,
+    id serial,
     nombre varchar(255),
     id_kardex bigserial,
     PRIMARY KEY (id)
@@ -100,7 +103,7 @@ CREATE TABLE Distribuidor (
 
 -- Ingreso
 CREATE TABLE Ingreso (
-    nro_comprobante bigserial,
+    nro_comprobante varchar(50),
     fecha timestamp,
     PRIMARY KEY (nro_comprobante),
 );
@@ -117,14 +120,13 @@ CREATE TABLE Categoria (
 CREATE TABLE Producto (
     marca varchar(50),
     codigo varchar(50),
-    id_categoria serial,
+    id_categoria serial not null,
     imagen varchar(50),
     documentacion varchar(50),
     descripcion varchar(50),
     documentacion varchar(70),
     u_medida varchar(20),
-    PRIMARY KEY (marca),
-    PRIMARY KEY (codigo),
+    PRIMARY KEY (marca, codigo),
     FOREIGN KEY (id_categoria),
     REFERENCES Categoria (id)
 );
@@ -133,6 +135,8 @@ CREATE TABLE Producto (
 -- Relaciones
 --------------------------------------------
 -- Compatible
+
+--no me convence :(
 CREATE TABLE Compatible (
     modelo_nombre varchar(50),
     modelo_marca varchar(50),
@@ -149,10 +153,8 @@ CREATE TABLE Compatible (
     REFERENCES Modelo (marca),
     FOREIGN KEY (modelo_ano),
     REFERENCES Modelo (ano),
-    FOREIGN KEY (producto_marca),
-    REFERENCES Producto (marca)
-    FOREIGN KEY (producto_codigo),
-    REFERENCES Producto (codigo)
+    FOREIGN KEY (producto_marca, producto_codigo),
+    REFERENCES Producto (marca, codigo)
 );
 
 -- Posee
@@ -165,11 +167,12 @@ CREATE TABLE Posee (
 );
 
 -- Provee
+-- hmmmmmmmmmmmmmmmmm
 CREATE TABLE Provee (
     producto_marca varchar(50),
     producto_codigo varchar(50),
     nro_comprobante_ingreso varchar(10),
-    cantidad bigserial,
+    cantidad bigserial not null default 0,
     precio_unitario real,
     PRIMARY KEY (producto_marca),
     PRIMARY KEY (producto_codigo),
@@ -180,14 +183,15 @@ CREATE TABLE Provee (
     REFERENCES Producto (codigo),
     FOREIGN KEY (id_ingreso),
     REFERENCES Ingreso (nro_comprobante)
+
+    CHECK(cantidad > 0)
 );
 
 -- Distribuye
 CREATE TABLE Distribuye (
     id_distribuidor varchar(10),
     nro_comprobante_ingreso varchar(10),
-    PRIMARY KEY (id_distribuidor),
-    PRIMARY KEY (nro_comprobante_ingreso),
+    PRIMARY KEY (id_distribuidor, nro_comprobante_ingreso),
     FOREIGN KEY (id_distribuidor),
     REFERENCES Distribuidor (id),
     FOREIGN KEY (nro_comprobante_ingreso),
@@ -206,12 +210,11 @@ CREATE TABLE Tiene (
 
 -- Sigue
 CREATE TABLE Sigue (
+    id_kardex bigserial,
     producto_marca varchar(50),
     producto_codigo varchar(50),
-    id_kardex bigserial,
-    PRIMARY KEY (producto_marca),
-    PRIMARY KEY (producto_codigo),
-    PRIMARY KEY (id_kardex),
+    PRIMARY KEY (id_kardex, producto_marca, producto_codigo),
+    FOREIGN KEY (producto_marca),
     REFERENCES Producto (marca),
     FOREIGN KEY (producto_codigo),
     REFERENCES Producto (codigo),
@@ -223,34 +226,111 @@ CREATE TABLE Sigue (
 
 -- Stock
 CREATE TABLE Stock (
+    id_tienda serial,
     producto_marca varchar(50),
     producto_codigo varchar(50),
-    id_tienda smallserial,
-    cantidad serial,
-    PRIMARY KEY (producto_marca),
-    PRIMARY KEY (producto_codigo),
-    PRIMARY KEY (tienda),
+    cantidad bigserial not null default 0,
+    PRIMARY KEY (id_tienda, producto_marca, product_codigo),
+    FOREIGN KEY (id_tienda),
+    REFERENCES Tienda (id)
+    FOREIGN KEY (producto_marca),
     REFERENCES Producto (marca),
     FOREIGN KEY (producto_codigo),
     REFERENCES Producto (codigo),
-    FOREIGN KEY (id_ingreso),
-    FOREIGN KEY (id_tienda),
-    REFERENCES Tienda (id)
+    
+    CHECK(cantidad > 0)
 );
 
 -- Aparece
 CREATE TABLE Aparece (
+    nro_comprobante varchar(50),
     producto_marca varchar(50),
     producto_codigo varchar(50),
-    nro_comprobante bigserial,
-    cantidad serial,
+    cantidad bigserial not null default 0,
     precio_unitario real,
-    PRIMARY KEY (producto_marca),
-    PRIMARY KEY (producto_codigo),
-    PRIMARY KEY (nro_comprobante),
+    PRIMARY KEY (nro_comprobante, producto_marca, producto_codigo),
+    FOREIGN KEY (producto_marca),
     REFERENCES Producto (marca),
     FOREIGN KEY (producto_codigo),
     REFERENCES Producto (codigo),
     FOREIGN KEY (nro_comprobante),
     REFERENCES Comprobante (codigo)
+
+    CHECK(cantidad > 0)
 );
+
+--primero que funque y de ahi lo hacemos transaccion
+CREATE FUNCTION shop_item(tienda_id int, producto_marca varchar(50), producto_codigo varchar(50), cantidad_comprada int, comprobante varchar(50))
+RETURNS null AS
+BEGIN 
+  --update a stock
+  UPDATE Stock
+  SET cantidad = cantidad - cantidad_comprada
+  WHERE Stock.id_tienda = tienda_id 
+  AND Stock.producto_marca = producto_marca, 
+  AND Stock.producto_codigo = producto_codigo;
+
+  --insert into Kardex
+  INSERT INTO Kardex(id_tienda, nro_comprobante_ingreso, tipo_operacion) --provisional
+  VALUES(tienda_id, comprobante, 'VENTA'); --provisional
+  
+  --insert into Sigue
+  INSERT INTO Sigue(producto_marca, producto_codigo)
+  VALUES(producto_marca, producto_codigo); 
+
+END;
+language 'plpgsql';
+
+
+CREATE FUNCTION add_item(tienda_id int, producto_marca varchar(50), producto_codigo varchar(50), cantidad_adquirida int, comprobante varchar(50))
+RETURNS null AS
+BEGIN 
+  --update a stock
+  UPDATE Stock
+  SET cantidad = cantidad + cantidad_adquirida
+  WHERE Stock.id_tienda = tienda_id 
+  AND Stock.producto_marca = producto_marca, 
+  AND Stock.producto_codigo = producto_codigo;
+
+  --insert into Kardex
+  INSERT INTO Kardex(id_tienda, nro_comprobante_ingreso, tipo_operacion) --provisional
+  VALUES(tienda_id, comprobante, 'COMPRA'); --provisional
+  
+  --insert into Sigue
+  INSERT INTO Sigue(producto_marca, producto_codigo)
+  VALUES(producto_marca, producto_codigo); 
+
+END;
+language 'plpgsql';
+
+
+CREATE FUNCTION transfer_item(tienda_id int, producto_marca varchar(50), producto_codigo varchar(50), cantidad_transferida int, tienda_destino_id)
+RETURNS null AS
+BEGIN 
+  --update a stock de la tienda origen
+  UPDATE Stock
+  SET cantidad = cantidad - cantidad_transferida
+  WHERE Stock.id_tienda = tienda_destino_id 
+  AND Stock.producto_marca = producto_marca, 
+  AND Stock.producto_codigo = producto_codigo;
+
+  --update a stock de la tienda destino
+  UPDATE Stock
+  SET cantidad = cantidad + cantidad_transferida
+  WHERE Stock.id_tienda = tienda_destino_id 
+  AND Stock.producto_marca = producto_marca, 
+  AND Stock.producto_codigo = producto_codigo;
+
+  --insert into Kardex 
+  INSERT INTO Kardex(id_tienda, nro_comprobante_ingreso, tipo_operacion) --provisional
+  VALUES(tienda_id, comprobante, 'TRASLADO'); --provisional
+  
+  --insert into Sigue
+  INSERT INTO Sigue(producto_marca, producto_codigo)
+  VALUES(producto_marca, producto_codigo); 
+
+END;
+language 'plpgsql';
+
+
+
