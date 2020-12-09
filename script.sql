@@ -3,6 +3,8 @@ CREATE DATABASE Casboni;
 --------------------------------------------
 -- Entidades
 --------------------------------------------
+-- 1k, 10k 100k y 10^6
+
 -- Cliente
 CREATE TABLE Cliente (
     id bigserial,
@@ -38,7 +40,6 @@ CREATE TABLE Ingreso (
 CREATE TABLE Tienda (
     id serial,
     nombre varchar(255),
-    id_kardex bigserial,
     PRIMARY KEY (id)
 );
 
@@ -88,9 +89,9 @@ CREATE TABLE Vehiculo (
     nVim varchar(17),
     nMotor varchar(14),
     modelo_nombre varchar(50),
-    modelo_marca varchar(50),
     modelo_ano serial,
-    color varchar(6),
+    modelo_marca varchar(50),
+    color varchar(8),
     PRIMARY KEY (placa),
     FOREIGN KEY (modelo_nombre, modelo_ano, modelo_marca)
     REFERENCES Modelo (nombre, ano, marca)
