@@ -31,7 +31,7 @@ CREATE TABLE Persona_Juridica (
 
 -- Ingreso
 CREATE TABLE Ingreso (
-    nro_comprobante varchar(50),
+    nro_comprobante varchar(10),
     fecha timestamp,
     PRIMARY KEY (nro_comprobante)
 );
@@ -43,6 +43,7 @@ CREATE TABLE Tienda (
     PRIMARY KEY (id)
 );
 
+-- Kardex
 CREATE TABLE Kardex (
     id bigserial,
     id_tienda serial,
@@ -83,14 +84,14 @@ CREATE TABLE Modelo (
     PRIMARY KEY (nombre, ano, marca)
 );
 
--- Vehiculo
+-- Vehiculo 
 CREATE TABLE Vehiculo (
     placa varchar(6),
     nVim varchar(17),
     nMotor varchar(14),
     modelo_nombre varchar(50),
-    modelo_ano serial,
     modelo_marca varchar(50),
+    modelo_ano serial,
     color varchar(8),
     PRIMARY KEY (placa),
     FOREIGN KEY (modelo_nombre, modelo_ano, modelo_marca)
@@ -130,8 +131,7 @@ CREATE TABLE Producto (
 --------------------------------------------
 -- Relaciones
 --------------------------------------------
--- Compatible
-
+-- Compatible 
 --no me convence :(
 CREATE TABLE Compatible (
     modelo_nombre varchar(50),
@@ -139,7 +139,7 @@ CREATE TABLE Compatible (
     modelo_ano serial,
     producto_marca varchar(50),
     producto_codigo varchar(50),
-    PRIMARY KEY (producto_marca, producto_codigo),
+    PRIMARY KEY (modelo_nombre, modelo_ano, modelo_marca, producto_marca, producto_codigo),
     FOREIGN KEY (modelo_nombre, modelo_ano, modelo_marca)
     REFERENCES Modelo (nombre, ano, marca),
     FOREIGN KEY (producto_marca, producto_codigo)
@@ -155,7 +155,7 @@ CREATE TABLE Posee (
     REFERENCES Vehiculo (placa)
 );
 
--- Provee
+-- Provee 
 CREATE TABLE Provee (
     producto_marca varchar(50),
     producto_codigo varchar(50),
@@ -198,7 +198,7 @@ CREATE TABLE Sigue (
     producto_marca varchar(50),
     producto_codigo varchar(50),
     nro_comprobante_ingreso varchar(50),
-    PRIMARY KEY (id_kardex, producto_marca, producto_codigo),
+    PRIMARY KEY (id_kardex, producto_marca, producto_codigo, nro_comprobante_ingreso),
     FOREIGN KEY (producto_marca, producto_codigo)
     REFERENCES Producto (marca, codigo),
     FOREIGN KEY (nro_comprobante_ingreso)
@@ -207,7 +207,7 @@ CREATE TABLE Sigue (
     REFERENCES Kardex (id)
 );
 
--- Stock
+-- Stock 
 CREATE TABLE Stock (
     id_tienda serial,
     producto_marca varchar(50),
@@ -222,7 +222,7 @@ CREATE TABLE Stock (
     CHECK(cantidad > 0)
 );
 
--- Aparece
+-- Aparece 
 CREATE TABLE Aparece (
     producto_marca varchar(50),
     producto_codigo varchar(50),
@@ -238,8 +238,207 @@ CREATE TABLE Aparece (
     CHECK(cantidad > 0)
 );
 
+-----------------------------------------------------------------------------
+-------------------- Procedures, ramdon functions and more ------------------
+-----------------------------------------------------------------------------
+Create or replace function random_string(length integer) returns text as
+$$
+declare
+  chars text[] := '{0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z}';
+  result text := '';
+  i integer := 0;
+begin
+  if length < 0 then
+    raise exception 'Given length cannot be less than 0';
+  end if;
+  for i in 1..length loop
+    result := result || chars[1+random()*(array_length(chars, 1)-1)];
+  end loop;
+  return result;
+end;
+$$ language plpgsql;
 
--- ya funca
+
+CREATE OR REPLACE FUNCTION random_between(low INT ,high INT) 
+   RETURNS INT AS
+$$
+BEGIN
+   RETURN floor(random()* (high-low + 1) + low);
+END;
+$$ language 'plpgsql' STRICT;
+
+
+---------------------------------------------
+-- Vehiculo
+-- select count(*) from vehiculo;
+
+DO
+$$
+DECLARE 
+    i record;
+    mo_nombrex varchar(50);
+    mo_marcax varchar(50);
+    mo_anox int;
+    num int;
+begin
+	select into num 0;
+    FOR i IN SELECT nombre, ano, marca from modelo  
+    LOOP
+        SELECT INTO mo_nombrex, mo_anox, mo_marcax nombre, ano, marca FROM modelo ORDER BY random() LIMIT 1;
+        INSERT INTO vehiculo values(num, 'nvim', 'motor', mo_nombrex, mo_marcax, mo_anox, '#ffffff');
+        select into num num+1;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Compatible
+-- select count(*) from compatible;
+
+DO
+$$
+DECLARE 
+	i record;
+	mo_nombrex varchar(50);
+	mo_marcax varchar(50);
+	mo_anox int;
+	pro_marca varchar(50);
+	pro_codigo varchar(50);
+	num int;
+begin
+	select into num 0;
+    FOR i IN SELECT marca from producto 
+    LOOP
+		SELECT INTO mo_nombrex, mo_anox, mo_marcax nombre, ano, marca FROM modelo ORDER BY random() LIMIT 1;
+		SELECT INTO pro_marca, pro_codigo marca, codigo FROM producto ORDER BY random() LIMIT 1;
+		INSERT INTO compatible values(mo_nombrex, mo_marcax, mo_anox, pro_marca, pro_codigo);
+		select into num num+1;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Ingreso
+-- select count(*) from ingreso;
+
+DO
+$$
+DECLARE 
+	i record;
+	num int;
+begin
+	select into num 0;
+    FOR i IN SELECT marca from producto 
+    LOOP
+		INSERT INTO ingreso values(random_string(10),CURRENT_TIMESTAMP);
+		select into num num+1;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Provee
+-- select count(*) from provee;
+
+DO
+$$
+DECLARE 
+	i record;
+	pro_marca varchar(50);
+	pro_codigo varchar(50);
+	ing_num_comp varchar(10);
+	mo_anox int;
+	num int;
+begin
+	select into num 0;
+    FOR i IN SELECT nro_comprobante from ingreso  
+    LOOP
+		SELECT INTO pro_marca, pro_codigo marca, codigo FROM producto ORDER BY random() LIMIT 1;
+		SELECT INTO ing_num_comp nro_comprobante FROM ingreso ORDER BY random() LIMIT 1;
+		INSERT INTO provee values(pro_marca, pro_codigo, ing_num_comp, random_between(1,1000), random_between(1,1000));
+		select into num num+1;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Stock
+-- select count(*) from stock;
+
+DO
+$$
+DECLARE 
+	i record;
+	id_tien int;
+	pro_marca varchar(50);
+	pro_codigo varchar(50);
+	num int;
+begin
+	select into num 0;
+    FOR i IN SELECT marca from producto 
+    LOOP
+		SELECT INTO pro_marca, pro_codigo marca, codigo FROM producto ORDER BY random() LIMIT 1;
+		SELECT INTO id_tien id FROM tienda ORDER BY random() LIMIT 1 ;
+		INSERT INTO stock values(id_tien, pro_marca, pro_codigo, random_between(1,1000));
+		select into num num+1;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Aparece
+-- select count(*) from aparece;
+
+DO
+$$
+DECLARE 
+	i record;
+	pro_marca varchar(50);
+	pro_codigo varchar(50);
+	nro_comp int;
+	num int;
+begin
+	select into num 0;
+    FOR i IN SELECT marca from producto 
+    LOOP
+		SELECT INTO pro_marca, pro_codigo marca, codigo FROM producto ORDER BY random() LIMIT 1;
+		SELECT INTO nro_comp numero FROM comprobante ORDER BY random() LIMIT 1;
+		INSERT INTO aparece values(pro_marca, pro_codigo, nro_comp, random_between(1,1000), random_between(1,10000));
+		select into num num+1;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Sigue
+-- select count(*) from sigue;
+
+DO
+$$
+DECLARE 
+	i record;
+	id_kar int;
+	pro_marca varchar(50);
+	pro_codigo varchar(50);
+	ing_num_comp varchar(10);
+	num int;
+begin
+	select into num 0;
+    FOR i IN SELECT marca from producto 
+    LOOP
+		SELECT INTO pro_marca, pro_codigo marca, codigo FROM producto ORDER BY random() LIMIT 1;
+		SELECT INTO id_kar id FROM kardex ORDER BY random() LIMIT 1;
+		SELECT INTO ing_num_comp nro_comprobante FROM ingreso ORDER BY random() LIMIT 1;
+		INSERT INTO sigue values(id_kar, pro_marca, pro_codigo, ing_num_comp);
+		select into num num+1;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+
 CREATE FUNCTION shop_item(tienda_id int, producto_marca varchar(50), producto_codigo varchar(50), cantidad_comprada int, comprobante varchar(50))
 RETURNS null AS
 BEGIN 
