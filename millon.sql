@@ -48,7 +48,7 @@ CREATE TABLE millon.Tienda (
 CREATE TABLE millon.Kardex (
     id bigserial,
     id_tienda serial,
-    nro_comprobante_ingreso varchar(50),
+    nro_comprobante_ingreso varchar(10),
     tipo_operacion serial,
     PRIMARY KEY (id),
     FOREIGN KEY (id_tienda)
@@ -87,7 +87,7 @@ CREATE TABLE millon.Modelo (
 
 -- Vehiculo -- con procedure
 CREATE TABLE millon.Vehiculo (
-    placa varchar(6),
+    placa varchar(8),
     nVim varchar(17),
     nMotor varchar(14),
     modelo_nombre varchar(50),
@@ -114,7 +114,7 @@ CREATE TABLE millon.Categoria (
     PRIMARY KEY (id)
 );
 
--- Producto
+-- Producto -- con procedure
 CREATE TABLE millon.Producto (
     marca varchar(50),
     codigo varchar(50),
@@ -148,7 +148,7 @@ CREATE TABLE millon.Compatible (
 -- Posee
 CREATE TABLE millon.Posee (
     id_cliente bigserial,
-    placa_vehiculo varchar(10),
+    placa_vehiculo varchar(8),
     PRIMARY KEY (id_cliente),
     FOREIGN KEY (placa_vehiculo)
     REFERENCES millon.Vehiculo (placa)
@@ -170,10 +170,10 @@ CREATE TABLE millon.Provee (
     CHECK(cantidad > 0)
 );
 
--- Distribuye - falta xd
+-- Distribuye 
 CREATE TABLE millon.Distribuye (
     id_distribuidor integer,
-    nro_comprobante_ingreso varchar(50),
+    nro_comprobante_ingreso varchar(10),
     PRIMARY KEY (id_distribuidor, nro_comprobante_ingreso),
     FOREIGN KEY (id_distribuidor)
     REFERENCES millon.Distribuidor (id),
@@ -196,7 +196,7 @@ CREATE TABLE millon.Sigue (
     id_kardex bigserial,
     producto_marca varchar(50),
     producto_codigo varchar(50),
-    nro_comprobante_ingreso varchar(50),
+    nro_comprobante_ingreso varchar(10),
     PRIMARY KEY (id_kardex, producto_marca, producto_codigo, nro_comprobante_ingreso),
     FOREIGN KEY (producto_marca, producto_codigo)
     REFERENCES millon.Producto (marca, codigo),
@@ -237,6 +237,20 @@ CREATE TABLE millon.Aparece (
     CHECK(cantidad > 0)
 );
 
+-- Tabla X(vehiculo)
+CREATE TABLE millon.tablaX (
+    placa varchar(6),
+    nVim varchar(17),
+    nMotor varchar(14),
+    modelo_nombre varchar(50),
+    modelo_marca varchar(50),
+    modelo_ano serial,
+    color varchar(8),
+    PRIMARY KEY (placa),
+    FOREIGN KEY (modelo_nombre, modelo_ano, modelo_marca)
+    REFERENCES millon.Modelo (nombre, ano, marca)
+);
+
 -----------------------------------------------------------------------------
 -------------------- Procedures, ramdon functions and more ------------------
 -----------------------------------------------------------------------------
@@ -273,14 +287,32 @@ $$ language 'plpgsql' STRICT;
 DO
 $$
 DECLARE 
-	i record;
-	num int;
+	i int;
 begin
-	select into num 0;
-    FOR i IN SELECT marca from millon.producto 
+	for i in 1..1000000
     LOOP
-		INSERT INTO millon.ingreso values(random_string(10),CURRENT_TIMESTAMP);
-		select into num num+1;
+		INSERT INTO millon.ingreso values(i,CURRENT_TIMESTAMP);
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Tabla X Procedure
+DO
+$$
+DECLARE 
+    i int;
+    mo_nombrex varchar(50);
+    mo_marcax varchar(50);
+    mo_anox int;
+    num int;
+begin
+	select into num 100000;
+    for i in 1..1000
+    LOOP
+        SELECT INTO mo_nombrex, mo_anox, mo_marcax nombre, ano, marca FROM millon.modelo ORDER BY random() LIMIT 1;
+        INSERT INTO millon.tablaX values(num, random_string(17), random_string(14), mo_nombrex, mo_marcax, mo_anox, '#ffffff');
+        select into num num+1;
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
@@ -288,22 +320,57 @@ $$ LANGUAGE plpgsql;
 
 -- Vehiculo
 -- select count(*) from millon.vehiculo;
-
 DO
 $$
 DECLARE 
-    i record;
+    i int;
     mo_nombrex varchar(50);
     mo_marcax varchar(50);
     mo_anox int;
     num int;
 begin
-	select into num 0;
-    FOR i IN SELECT nombre, ano, marca from millon.modelo  
+	select into num 1;
+    for i in 1..1000000
     LOOP
-        SELECT INTO mo_nombrex, mo_anox, mo_marcax nombre, ano, marca FROM millon.modelo ORDER BY random() LIMIT 1;
+        SELECT INTO mo_nombrex, mo_anox, mo_marcax modelo_nombre, modelo_ano, modelo_marca FROM millon.tablaX ORDER BY random() LIMIT 1;
         INSERT INTO millon.vehiculo values(num, random_string(17), random_string(14), mo_nombrex, mo_marcax, mo_anox, '#ffffff');
         select into num num+1;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Producto
+-- select count(*) from millon.producto 
+-- select * from millon.producto 
+
+DO
+$$
+DECLARE 
+	i int;
+	id_cat int;
+begin
+    for i in 1..1000000 
+    LOOP
+		SELECT INTO id_cat id FROM millon.Categoria ORDER BY random() LIMIT 1;
+		INSERT INTO millon.producto values(i, i, id_cat, random_string(50), random_string(50), random_string(50), random_between(1, 20));
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+-- Tabla P Procedure
+-- select count(*) from millon.tablaP;
+DO
+$$
+DECLARE 
+    i int;
+    id_cat int;
+begin
+    for i in 1..1000
+    LOOP
+        SELECT INTO id_cat id FROM millon.Categoria ORDER BY random() LIMIT 1;
+		INSERT INTO millon.tablaP values(random_string(50), random_string(50), id_cat, random_string(50), random_string(50), random_string(50), random_between(1, 20));
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
@@ -311,50 +378,60 @@ $$ LANGUAGE plpgsql;
 
 -- Compatible
 -- select count(*) from millon.compatible;
-
 DO
 $$
 DECLARE 
-	i record;
+	i int;
 	mo_nombrex varchar(50);
 	mo_marcax varchar(50);
 	mo_anox int;
 	pro_marca varchar(50);
 	pro_codigo varchar(50);
-	num int;
 begin
-	select into num 0;
-    FOR i IN SELECT marca from millon.producto 
+    for i in 1..1000000 
     LOOP
-		SELECT INTO mo_nombrex, mo_anox, mo_marcax nombre, ano, marca FROM millon.modelo ORDER BY random() LIMIT 1;
-		SELECT INTO pro_marca, pro_codigo marca, codigo FROM millon.producto ORDER BY random() LIMIT 1;
-		INSERT INTO millon.compatible values(mo_nombrex, mo_marcax, mo_anox, pro_marca, pro_codigo);
-		select into num num+1;
+		SELECT INTO mo_nombrex, mo_anox, mo_marcax modelo_nombre, modelo_ano, modelo_marca FROM millon.tablaX ORDER BY random() LIMIT 1;
+		INSERT INTO millon.compatible values(mo_nombrex, mo_marcax, mo_anox, i, i);
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
 
 
--- Provee
--- select count(*) from millon.provee;
+-- Posee
+-- select count(*) from millon.posee;
 
 DO
 $$
 DECLARE 
-	i record;
+	i int;
+begin
+    for i in 1..1000000 
+    LOOP
+		INSERT INTO millon.posee values(i+2/2, i);
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+
+-- Provee
+-- select count(*) from millon.provee; AQUI
+
+DO
+$$
+DECLARE 
+	i int;
 	pro_marca varchar(50);
 	pro_codigo varchar(50);
 	ing_num_comp varchar(10);
 	mo_anox int;
-	num int;
 begin
-	select into num 0;
-    FOR i IN SELECT nro_comprobante from millon.ingreso  
+    for i in 1..1000000 
     LOOP
 		SELECT INTO pro_marca, pro_codigo marca, codigo FROM millon.producto ORDER BY random() LIMIT 1;
 		SELECT INTO ing_num_comp nro_comprobante FROM millon.ingreso ORDER BY random() LIMIT 1;
-		INSERT INTO millon.provee values(pro_marca, pro_codigo, ing_num_comp, random_between(1,1000), random_between(1,1000));
-		select into num num+1;
+		INSERT INTO millon.provee values(pro_marca, pro_codigo, ing_num_comp, random_between(1,1000000), random_between(1,1000000));
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
@@ -366,21 +443,18 @@ $$ LANGUAGE plpgsql;
 DO
 $$
 DECLARE 
-	i record;
+	i int;
 	id_kar int;
 	pro_marca varchar(50);
 	pro_codigo varchar(50);
 	ing_num_comp varchar(10);
-	num int;
 begin
-	select into num 0;
-    FOR i IN SELECT marca from millon.producto 
+    for i in 1..1000000 
     LOOP
 		SELECT INTO pro_marca, pro_codigo marca, codigo FROM millon.producto ORDER BY random() LIMIT 1;
 		SELECT INTO id_kar id FROM millon.kardex ORDER BY random() LIMIT 1;
 		SELECT INTO ing_num_comp nro_comprobante FROM millon.ingreso ORDER BY random() LIMIT 1;
 		INSERT INTO millon.sigue values(id_kar, pro_marca, pro_codigo, ing_num_comp);
-		select into num num+1;
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
@@ -392,19 +466,16 @@ $$ LANGUAGE plpgsql;
 DO
 $$
 DECLARE 
-	i record;
+	i int;
 	id_tien int;
 	pro_marca varchar(50);
 	pro_codigo varchar(50);
-	num int;
 begin
-	select into num 0;
-    FOR i IN SELECT marca from millon.producto 
+    for i in 1..1000000 
     LOOP
 		SELECT INTO pro_marca, pro_codigo marca, codigo FROM millon.producto ORDER BY random() LIMIT 1;
 		SELECT INTO id_tien id FROM millon.tienda ORDER BY random() LIMIT 1 ;
-		INSERT INTO millon.stock values(id_tien, pro_marca, pro_codigo, random_between(1,1000));
-		select into num num+1;
+		INSERT INTO millon.stock values(id_tien, pro_marca, pro_codigo, random_between(1,1000000));
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
@@ -416,19 +487,16 @@ $$ LANGUAGE plpgsql;
 DO
 $$
 DECLARE 
-	i record;
+	i int;
 	pro_marca varchar(50);
 	pro_codigo varchar(50);
 	nro_comp int;
-	num int;
 begin
-	select into num 0;
-    FOR i IN SELECT marca from millon.producto 
+    for i in 1..1000000
     LOOP
 		SELECT INTO pro_marca, pro_codigo marca, codigo FROM millon.producto ORDER BY random() LIMIT 1;
 		SELECT INTO nro_comp numero FROM millon.comprobante ORDER BY random() LIMIT 1;
 		INSERT INTO millon.aparece values(pro_marca, pro_codigo, nro_comp, random_between(1,1000), random_between(1,10000));
-		select into num num+1;
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;

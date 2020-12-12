@@ -63,7 +63,7 @@ CREATE TABLE mil.Tienda (
 CREATE TABLE mil.Kardex (
     id bigserial,
     id_tienda serial,
-    nro_comprobante_ingreso varchar(50),
+    nro_comprobante_ingreso varchar(10),
     tipo_operacion serial,
     PRIMARY KEY (id),
     FOREIGN KEY (id_tienda)
@@ -163,7 +163,7 @@ CREATE TABLE mil.Compatible (
 -- Posee
 CREATE TABLE mil.Posee (
     id_cliente bigserial,
-    placa_vehiculo varchar(10),
+    placa_vehiculo varchar(8),
     PRIMARY KEY (id_cliente),
     FOREIGN KEY (placa_vehiculo)
     REFERENCES mil.Vehiculo (placa)
@@ -185,10 +185,10 @@ CREATE TABLE mil.Provee (
     CHECK(cantidad > 0)
 );
 
--- Distribuye - falta xd
+-- Distribuye 
 CREATE TABLE mil.Distribuye (
     id_distribuidor integer,
-    nro_comprobante_ingreso varchar(50),
+    nro_comprobante_ingreso varchar(10),
     PRIMARY KEY (id_distribuidor, nro_comprobante_ingreso),
     FOREIGN KEY (id_distribuidor)
     REFERENCES mil.Distribuidor (id),
@@ -211,7 +211,7 @@ CREATE TABLE mil.Sigue (
     id_kardex bigserial,
     producto_marca varchar(50),
     producto_codigo varchar(50),
-    nro_comprobante_ingreso varchar(50),
+    nro_comprobante_ingreso varchar(10),
     PRIMARY KEY (id_kardex, producto_marca, producto_codigo, nro_comprobante_ingreso),
     FOREIGN KEY (producto_marca, producto_codigo)
     REFERENCES mil.Producto (marca, codigo),
@@ -288,14 +288,11 @@ $$ language 'plpgsql' STRICT;
 DO
 $$
 DECLARE 
-	i record;
-	num int;
+	i int;
 begin
-	select into num 0;
-    FOR i IN SELECT marca from mil.producto 
+	for i in 1..1000
     LOOP
 		INSERT INTO mil.ingreso values(random_string(10),CURRENT_TIMESTAMP);
-		select into num num+1;
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
@@ -330,21 +327,18 @@ $$ LANGUAGE plpgsql;
 DO
 $$
 DECLARE 
-	i record;
+	i int;
 	mo_nombrex varchar(50);
 	mo_marcax varchar(50);
 	mo_anox int;
 	pro_marca varchar(50);
 	pro_codigo varchar(50);
-	num int;
 begin
-	select into num 0;
-    FOR i IN SELECT marca from mil.producto 
+    for i in 1..1000 
     LOOP
 		SELECT INTO mo_nombrex, mo_anox, mo_marcax nombre, ano, marca FROM mil.modelo ORDER BY random() LIMIT 1;
 		SELECT INTO pro_marca, pro_codigo marca, codigo FROM mil.producto ORDER BY random() LIMIT 1;
 		INSERT INTO mil.compatible values(mo_nombrex, mo_marcax, mo_anox, pro_marca, pro_codigo);
-		select into num num+1;
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
@@ -356,20 +350,17 @@ $$ LANGUAGE plpgsql;
 DO
 $$
 DECLARE 
-	i record;
+	i int;
 	pro_marca varchar(50);
 	pro_codigo varchar(50);
 	ing_num_comp varchar(10);
 	mo_anox int;
-	num int;
 begin
-	select into num 0;
-    FOR i IN SELECT nro_comprobante from mil.ingreso  
+    for i in 1..1000 
     LOOP
 		SELECT INTO pro_marca, pro_codigo marca, codigo FROM mil.producto ORDER BY random() LIMIT 1;
 		SELECT INTO ing_num_comp nro_comprobante FROM mil.ingreso ORDER BY random() LIMIT 1;
 		INSERT INTO mil.provee values(pro_marca, pro_codigo, ing_num_comp, random_between(1,1000), random_between(1,1000));
-		select into num num+1;
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
@@ -381,21 +372,18 @@ $$ LANGUAGE plpgsql;
 DO
 $$
 DECLARE 
-	i record;
+	i int;
 	id_kar int;
 	pro_marca varchar(50);
 	pro_codigo varchar(50);
 	ing_num_comp varchar(10);
-	num int;
 begin
-	select into num 0;
-    FOR i IN SELECT marca from mil.producto 
+    for i in 1..1000 
     LOOP
 		SELECT INTO pro_marca, pro_codigo marca, codigo FROM mil.producto ORDER BY random() LIMIT 1;
 		SELECT INTO id_kar id FROM mil.kardex ORDER BY random() LIMIT 1;
 		SELECT INTO ing_num_comp nro_comprobante FROM mil.ingreso ORDER BY random() LIMIT 1;
 		INSERT INTO mil.sigue values(id_kar, pro_marca, pro_codigo, ing_num_comp);
-		select into num num+1;
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
@@ -407,19 +395,16 @@ $$ LANGUAGE plpgsql;
 DO
 $$
 DECLARE 
-	i record;
+	i int;
 	id_tien int;
 	pro_marca varchar(50);
 	pro_codigo varchar(50);
-	num int;
 begin
-	select into num 0;
-    FOR i IN SELECT marca from mil.producto 
+    for i in 1..1000 
     LOOP
 		SELECT INTO pro_marca, pro_codigo marca, codigo FROM mil.producto ORDER BY random() LIMIT 1;
 		SELECT INTO id_tien id FROM mil.tienda ORDER BY random() LIMIT 1 ;
 		INSERT INTO mil.stock values(id_tien, pro_marca, pro_codigo, random_between(1,1000));
-		select into num num+1;
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
@@ -431,19 +416,16 @@ $$ LANGUAGE plpgsql;
 DO
 $$
 DECLARE 
-	i record;
+	i int;
 	pro_marca varchar(50);
 	pro_codigo varchar(50);
 	nro_comp int;
-	num int;
 begin
-	select into num 0;
-    FOR i IN SELECT marca from mil.producto 
+    for i in 1..1000
     LOOP
 		SELECT INTO pro_marca, pro_codigo marca, codigo FROM mil.producto ORDER BY random() LIMIT 1;
 		SELECT INTO nro_comp numero FROM mil.comprobante ORDER BY random() LIMIT 1;
 		INSERT INTO mil.aparece values(pro_marca, pro_codigo, nro_comp, random_between(1,1000), random_between(1,10000));
-		select into num num+1;
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
@@ -451,78 +433,3 @@ $$ LANGUAGE plpgsql;
 -----------------------------------------------------------------------------
 -----------------------------------------------------------------------------
 -----------------------------------------------------------------------------
-
-CREATE FUNCTION shop_item(tienda_id int, producto_marca varchar(50), producto_codigo varchar(50), cantidad_comprada int, comprobante varchar(50))
-RETURNS null AS
-BEGIN 
-  --update a stock
-  UPDATE Stock
-  SET cantidad = cantidad - cantidad_comprada
-  WHERE Stock.id_tienda = tienda_id 
-  AND Stock.producto_marca = producto_marca, 
-  AND Stock.producto_codigo = producto_codigo;
-
-  --insert into Kardex
-  INSERT INTO Kardex(id_tienda, nro_comprobante_ingreso, tipo_operacion) --provisional
-  VALUES(tienda_id, comprobante, 'VENTA'); --provisional
-  
-  --insert into Sigue
-  INSERT INTO Sigue(producto_marca, producto_codigo)
-  VALUES(producto_marca, producto_codigo); 
-
-END;
-language 'plpgsql';
-
-
-CREATE FUNCTION add_item(tienda_id int, producto_marca varchar(50), producto_codigo varchar(50), cantidad_adquirida int, comprobante varchar(50))
-RETURNS null AS
-BEGIN 
-  --update a stock
-  UPDATE Stock
-  SET cantidad = cantidad + cantidad_adquirida
-  WHERE Stock.id_tienda = tienda_id 
-  AND Stock.producto_marca = producto_marca, 
-  AND Stock.producto_codigo = producto_codigo;
-
-  --insert into Kardex
-  INSERT INTO Kardex(id_tienda, nro_comprobante_ingreso, tipo_operacion) --provisional
-  VALUES(tienda_id, comprobante, 'COMPRA'); --provisional
-  
-  --insert into Sigue
-  INSERT INTO Sigue(producto_marca, producto_codigo)
-  VALUES(producto_marca, producto_codigo); 
-
-END;
-language 'plpgsql';
-
-
-CREATE FUNCTION transfer_item(tienda_id int, producto_marca varchar(50), producto_codigo varchar(50), cantidad_transferida int, tienda_destino_id)
-RETURNS null AS
-BEGIN 
-  --update a stock de la tienda origen
-  UPDATE Stock
-  SET cantidad = cantidad - cantidad_transferida
-  WHERE Stock.id_tienda = tienda_destino_id 
-  AND Stock.producto_marca = producto_marca, 
-  AND Stock.producto_codigo = producto_codigo;
-
-  --update a stock de la tienda destino
-  UPDATE Stock
-  SET cantidad = cantidad + cantidad_transferida
-  WHERE Stock.id_tienda = tienda_destino_id 
-  AND Stock.producto_marca = producto_marca, 
-  AND Stock.producto_codigo = producto_codigo;
-
-  --insert into Kardex 
-  INSERT INTO Kardex(id_tienda, nro_comprobante_ingreso, tipo_operacion) --provisional
-  VALUES(tienda_id, comprobante, 'TRASLADO'); --provisional
-  
-  --insert into Sigue
-  INSERT INTO Sigue(producto_marca, producto_codigo)
-  VALUES(producto_marca, producto_codigo); 
-
-END;
-language 'plpgsql';
-
-
-

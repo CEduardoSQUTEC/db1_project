@@ -48,7 +48,7 @@ CREATE TABLE diezmil.Tienda (
 CREATE TABLE diezmil.Kardex (
     id bigserial,
     id_tienda serial,
-    nro_comprobante_ingreso varchar(50),
+    nro_comprobante_ingreso varchar(10),
     tipo_operacion serial,
     PRIMARY KEY (id),
     FOREIGN KEY (id_tienda)
@@ -173,7 +173,7 @@ CREATE TABLE diezmil.Provee (
 -- Distribuye - falta xd
 CREATE TABLE diezmil.Distribuye (
     id_distribuidor integer,
-    nro_comprobante_ingreso varchar(50),
+    nro_comprobante_ingreso varchar(10),
     PRIMARY KEY (id_distribuidor, nro_comprobante_ingreso),
     FOREIGN KEY (id_distribuidor)
     REFERENCES diezmil.Distribuidor (id),
@@ -196,7 +196,7 @@ CREATE TABLE diezmil.Sigue (
     id_kardex bigserial,
     producto_marca varchar(50),
     producto_codigo varchar(50),
-    nro_comprobante_ingreso varchar(50),
+    nro_comprobante_ingreso varchar(10),
     PRIMARY KEY (id_kardex, producto_marca, producto_codigo, nro_comprobante_ingreso),
     FOREIGN KEY (producto_marca, producto_codigo)
     REFERENCES diezmil.Producto (marca, codigo),
@@ -269,18 +269,14 @@ $$ language 'plpgsql' STRICT;
 
 ---------------------------------------------
 -- Ingreso
--- select count(*) from diezmil.ingreso;
 DO
 $$
 DECLARE 
-	i record;
-	num int;
+	i int;
 begin
-	select into num 0;
-    FOR i IN SELECT marca from diezmil.producto 
+	for i in 1..1000
     LOOP
-		INSERT INTO diezmil.ingreso values(random_string(10),CURRENT_TIMESTAMP);
-		select into num num+1;
+		INSERT INTO millon.ingreso values(random_string(10),CURRENT_TIMESTAMP);
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
@@ -292,17 +288,17 @@ $$ LANGUAGE plpgsql;
 DO
 $$
 DECLARE 
-    i record;
+    i int;
     mo_nombrex varchar(50);
     mo_marcax varchar(50);
     mo_anox int;
     num int;
 begin
-	select into num 0;
-    FOR i IN SELECT nombre, ano, marca from diezmil.modelo  
+	select into num 1000;
+    for i in 1..1000
     LOOP
-        SELECT INTO mo_nombrex, mo_anox, mo_marcax nombre, ano, marca FROM diezmil.modelo ORDER BY random() LIMIT 1;
-        INSERT INTO diezmil.vehiculo values(num, random_string(17), random_string(14), mo_nombrex, mo_marcax, mo_anox, '#ffffff');
+        SELECT INTO mo_nombrex, mo_anox, mo_marcax nombre, ano, marca FROM millon.modelo ORDER BY random() LIMIT 1;
+        INSERT INTO millon.vehiculo values(num, random_string(17), random_string(14), mo_nombrex, mo_marcax, mo_anox, '#ffffff');
         select into num num+1;
     END LOOP;
 END;
@@ -314,21 +310,18 @@ $$ LANGUAGE plpgsql;
 DO
 $$
 DECLARE 
-	i record;
+	i int;
 	mo_nombrex varchar(50);
 	mo_marcax varchar(50);
 	mo_anox int;
 	pro_marca varchar(50);
 	pro_codigo varchar(50);
-	num int;
 begin
-	select into num 0;
-    FOR i IN SELECT marca from diezmil.producto 
+    for i in 1..1000 
     LOOP
-		SELECT INTO mo_nombrex, mo_anox, mo_marcax nombre, ano, marca FROM diezmil.modelo ORDER BY random() LIMIT 1;
-		SELECT INTO pro_marca, pro_codigo marca, codigo FROM diezmil.producto ORDER BY random() LIMIT 1;
-		INSERT INTO diezmil.compatible values(mo_nombrex, mo_marcax, mo_anox, pro_marca, pro_codigo);
-		select into num num+1;
+		SELECT INTO mo_nombrex, mo_anox, mo_marcax nombre, ano, marca FROM millon.modelo ORDER BY random() LIMIT 1;
+		SELECT INTO pro_marca, pro_codigo marca, codigo FROM millon.producto ORDER BY random() LIMIT 1;
+		INSERT INTO millon.compatible values(mo_nombrex, mo_marcax, mo_anox, pro_marca, pro_codigo);
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
@@ -340,20 +333,17 @@ $$ LANGUAGE plpgsql;
 DO
 $$
 DECLARE 
-	i record;
+	i int;
 	pro_marca varchar(50);
 	pro_codigo varchar(50);
 	ing_num_comp varchar(10);
 	mo_anox int;
-	num int;
 begin
-	select into num 0;
-    FOR i IN SELECT nro_comprobante from diezmil.ingreso  
+    for i in 1..1000 
     LOOP
-		SELECT INTO pro_marca, pro_codigo marca, codigo FROM diezmil.producto ORDER BY random() LIMIT 1;
-		SELECT INTO ing_num_comp nro_comprobante FROM diezmil.ingreso ORDER BY random() LIMIT 1;
-		INSERT INTO diezmil.provee values(pro_marca, pro_codigo, ing_num_comp, random_between(1,1000), random_between(1,1000));
-		select into num num+1;
+		SELECT INTO pro_marca, pro_codigo marca, codigo FROM millon.producto ORDER BY random() LIMIT 1;
+		SELECT INTO ing_num_comp nro_comprobante FROM millon.ingreso ORDER BY random() LIMIT 1;
+		INSERT INTO millon.provee values(pro_marca, pro_codigo, ing_num_comp, random_between(1,1000), random_between(1,1000));
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
@@ -365,21 +355,18 @@ $$ LANGUAGE plpgsql;
 DO
 $$
 DECLARE 
-	i record;
+	i int;
 	id_kar int;
 	pro_marca varchar(50);
 	pro_codigo varchar(50);
 	ing_num_comp varchar(10);
-	num int;
 begin
-	select into num 0;
-    FOR i IN SELECT marca from diezmil.producto 
+    for i in 1..1000 
     LOOP
-		SELECT INTO pro_marca, pro_codigo marca, codigo FROM diezmil.producto ORDER BY random() LIMIT 1;
-		SELECT INTO id_kar id FROM diezmil.kardex ORDER BY random() LIMIT 1;
-		SELECT INTO ing_num_comp nro_comprobante FROM diezmil.ingreso ORDER BY random() LIMIT 1;
-		INSERT INTO diezmil.sigue values(id_kar, pro_marca, pro_codigo, ing_num_comp);
-		select into num num+1;
+		SELECT INTO pro_marca, pro_codigo marca, codigo FROM millon.producto ORDER BY random() LIMIT 1;
+		SELECT INTO id_kar id FROM millon.kardex ORDER BY random() LIMIT 1;
+		SELECT INTO ing_num_comp nro_comprobante FROM millon.ingreso ORDER BY random() LIMIT 1;
+		INSERT INTO millon.sigue values(id_kar, pro_marca, pro_codigo, ing_num_comp);
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
@@ -391,19 +378,16 @@ $$ LANGUAGE plpgsql;
 DO
 $$
 DECLARE 
-	i record;
+	i int;
 	id_tien int;
 	pro_marca varchar(50);
 	pro_codigo varchar(50);
-	num int;
 begin
-	select into num 0;
-    FOR i IN SELECT marca from diezmil.producto 
+    for i in 1..1000 
     LOOP
-		SELECT INTO pro_marca, pro_codigo marca, codigo FROM diezmil.producto ORDER BY random() LIMIT 1;
-		SELECT INTO id_tien id FROM diezmil.tienda ORDER BY random() LIMIT 1 ;
-		INSERT INTO diezmil.stock values(id_tien, pro_marca, pro_codigo, random_between(1,1000));
-		select into num num+1;
+		SELECT INTO pro_marca, pro_codigo marca, codigo FROM millon.producto ORDER BY random() LIMIT 1;
+		SELECT INTO id_tien id FROM millon.tienda ORDER BY random() LIMIT 1 ;
+		INSERT INTO millon.stock values(id_tien, pro_marca, pro_codigo, random_between(1,1000));
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
@@ -415,19 +399,16 @@ $$ LANGUAGE plpgsql;
 DO
 $$
 DECLARE 
-	i record;
+	i int;
 	pro_marca varchar(50);
 	pro_codigo varchar(50);
 	nro_comp int;
-	num int;
 begin
-	select into num 0;
-    FOR i IN SELECT marca from diezmil.producto 
+    for i in 1..1000
     LOOP
-		SELECT INTO pro_marca, pro_codigo marca, codigo FROM diezmil.producto ORDER BY random() LIMIT 1;
-		SELECT INTO nro_comp numero FROM diezmil.comprobante ORDER BY random() LIMIT 1;
-		INSERT INTO diezmil.aparece values(pro_marca, pro_codigo, nro_comp, random_between(1,1000), random_between(1,10000));
-		select into num num+1;
+		SELECT INTO pro_marca, pro_codigo marca, codigo FROM millon.producto ORDER BY random() LIMIT 1;
+		SELECT INTO nro_comp numero FROM millon.comprobante ORDER BY random() LIMIT 1;
+		INSERT INTO millon.aparece values(pro_marca, pro_codigo, nro_comp, random_between(1,1000), random_between(1,10000));
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
