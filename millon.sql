@@ -73,13 +73,13 @@ CREATE TABLE millon.Ingreso (
 CREATE TABLE millon.Kardex (
     id bigserial,
     id_tienda serial,
-    nro_comprobante_ingreso varchar(10),
+    nro_comprobante varchar(10),
     tipo_operacion serial,
     PRIMARY KEY (id),
     FOREIGN KEY (id_tienda)
     REFERENCES millon.Tienda (id),
-    FOREIGN KEY (nro_comprobante_ingreso)
-    REFERENCES millon.Ingreso (nro_comprobante)
+    FOREIGN KEY (nro_comprobante)
+    REFERENCES millon.Comprobante (numero)
 );
 
 -- Modelo -- con procedure
@@ -172,7 +172,7 @@ CREATE TABLE millon.Provee (
     FOREIGN KEY (producto_marca, producto_codigo)
     REFERENCES millon.Producto (marca, codigo),
     FOREIGN KEY (nro_comprobante_ingreso)
-    REFERENCES millon.Ingreso (nro_comprobante),
+    REFERENCES millon.Comprobante (numero),
 
     CHECK(cantidad > 0)
 );
@@ -185,7 +185,7 @@ CREATE TABLE millon.Distribuye (
     FOREIGN KEY (id_distribuidor)
     REFERENCES millon.Distribuidor (id),
     FOREIGN KEY (nro_comprobante_ingreso)
-    REFERENCES millon.Ingreso (nro_comprobante)
+    REFERENCES millon.Comprobante (numero)
 );
 
 -- Tiene -- con procedure
@@ -203,12 +203,12 @@ CREATE TABLE millon.Sigue (
     id_kardex bigserial,
     producto_marca varchar(50),
     producto_codigo varchar(50),
-    nro_comprobante_ingreso varchar(10),
-    PRIMARY KEY (id_kardex, producto_marca, producto_codigo, nro_comprobante_ingreso),
+    nro_comprobante varchar(10),
+    PRIMARY KEY (id_kardex, producto_marca, producto_codigo, nro_comprobante),
     FOREIGN KEY (producto_marca, producto_codigo)
     REFERENCES millon.Producto (marca, codigo),
-    FOREIGN KEY (nro_comprobante_ingreso)
-    REFERENCES millon.Ingreso (nro_comprobante),
+    FOREIGN KEY (nro_comprobante)
+    REFERENCES millon.Comprobante (numero),
     FOREIGN KEY (id_kardex)
     REFERENCES millon.Kardex (id)
 );
